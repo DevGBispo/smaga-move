@@ -19,6 +19,17 @@ function App() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [view, setView] = useState<'home' | 'users'>('home');
+  const [staff, setStaff] = useState<Array<{id:string;display_name:string;role:string;active:boolean;profile_sectors:Array<{sector:string}>}>>([]);
+  const [staffLoading, setStaffLoading] = useState(false);
+  const [staffError, setStaffError] = useState('');
+  const [staffNotice, setStaffNotice] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteName, setInviteName] = useState('');
+  const [inviteRole, setInviteRole] = useState('operator');
+  const [inviteSectors, setInviteSectors] = useState<string[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!supabase) { setLoading(false); return; }
@@ -40,6 +51,7 @@ function App() {
     if (!session || !supabase) {
       setName('');
       setAuthorized(false);
+      setIsAdmin(false);
       setCheckingAccess(false);
       return;
     }
@@ -56,11 +68,32 @@ function App() {
           return;
         }
         setName(data.display_name || session.user.email || 'Operador');
+        setIsAdmin(data.role === 'admin');
         setError('');
         setAuthorized(true);
       });
     return () => { cancelled = true; };
   }, [session?.user.id]);
+
+  async function loadStaff() {
+    if (!supabase || !isAdmin) return;
+    setStaffLoading(true); setStaffError('');
+    const { data, error: loadError } = await supabase.from('profiles').select('id,display_name,role,active,profile_sectors(sector)').order('created_at', {ascending:false});
+    setStaffLoading(false);
+    if (loadError) setStaffError('Não foi possível carregar os funcionários.');
+    else setStaff((data || []) as typeof staff);
+  }
+
+  async function manageStaff(payload: Record<string, unknown>) {
+    if (!supabase || !isAdmin || busy) return;
+    setBusy(true); setStaffError(''); setStaffNotice('');
+    const { data, error: manageError } = await supabase.functions.invoke('manage-staff', {body:payload});
+    setBusy(false);
+    if (manageError || data?.error) { setStaffError(data?.error || 'Falha na operação. Verifique as permissões ou tente novamente.'); return; }
+    setStaffNotice(payload.action === 'invite' ? 'Convite solicitado. Confira o e-mail do funcionário.' : 'Funcionário atualizado.');
+    setEditingId(null); setInviteEmail(''); setInviteName(''); setInviteRole('operator'); setInviteSectors([]);
+    await loadStaff();
+  }
 
   async function sendRecovery(event: React.FormEvent) {
     event.preventDefault();
@@ -129,8 +162,10 @@ function App() {
   if (loading) return <main className="page"><section className="panel"><p>Carregando sessão...</p></section></main>;
   if (mode === 'recovery') return <main className="page"><section className="panel"><small>SEGURANÇA DA CONTA</small><h1>Definir nova senha</h1><p>Escolha uma nova senha para continuar. O painel ficará bloqueado até a conclusão.</p><form onSubmit={savePassword}><label>Nova senha<input type="password" minLength={12} required autoComplete="new-password" value={newPassword} onChange={e => setNewPassword(e.target.value)}/></label><label>Confirmar nova senha<input type="password" minLength={12} required autoComplete="new-password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}/></label>{error && <p role="alert" className="error">{error}</p>}<button disabled={busy || !session}>{busy ? 'Salvando...' : 'Salvar nova senha'}</button></form>{!session && <p className="muted">Validando link de recuperação. Se não funcionar, solicite outro link.</p>}<button className="text-button" onClick={async () => { await supabase?.auth.signOut(); setMode('forgot'); setError(''); }}>Solicitar outro link</button></section></main>;
   if (!session) return <main className="page"><section className="panel"><small>S.MAGALHÃES & ESSEMAGA · DESDE 1920</small><h1>SMAGA <em>Move</em></h1><p>Gestão Operacional de Transporte</p>{mode === 'forgot' ? <><h2>Recuperar acesso</h2><form onSubmit={sendRecovery}><label>E-mail<input type="email" required value={email} onChange={e => setEmail(e.target.value)} autoComplete="email"/></label>{error && <p role="alert" className="error">{error}</p>}{notice && <p role="status">{notice}</p>}<button disabled={busy}>{busy ? 'Enviando...' : 'Enviar link de recuperação'}</button></form><button className="text-button" onClick={() => { setMode('login'); setError(''); setNotice(''); }}>Voltar ao login</button></> : <><form onSubmit={login}><label>E-mail<input type="email" required value={email} onChange={e => setEmail(e.target.value)} autoComplete="email"/></label><label>Senha<input type="password" required value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password"/></label>{error && <p role="alert" className="error">{error}</p>}{notice && <p role="status">{notice}</p>}<button type="submit" disabled={signingIn}>{signingIn ? 'Entrando...' : 'Entrar'}</button></form><button className="text-button" onClick={() => { setMode('forgot'); setError(''); setNotice(''); }}>Esqueci minha senha</button><p className="muted">Contas criadas e aprovadas pela administração.</p></>}</section></main>;
+  const sectorNames: Record<string,string> = {operations:'Operações',full:'Cheios',empty:'Vazios'};
+  const roleNames: Record<string,string> = {admin:'Administrador',manager:'Gestor',operator:'Operador'};
   if (checkingAccess || !authorized) return <main className="page"><section className="panel"><h1>SMAGA <em>Move</em></h1><p>{checkingAccess ? "Verificando autorização..." : (error || "Acesso não autorizado.")}</p><button onClick={() => supabase?.auth.signOut()}>Sair</button></section></main>;
-  return <div className="shell"><aside><div className="brand">SMAGA <em>Move</em></div><div className="muted">S.Magalhães & Essemaga</div><nav><div className="active">Visão geral</div><div>Operações — em construção</div><div>Motoristas — em construção</div><div>Chamada — em construção</div><div>Embarque — em construção</div></nav></aside><main className="workspace"><header><span>Fundação do sistema</span><button className="secondary" onClick={() => supabase?.auth.signOut()}>Sair</button></header><section className="panel"><small>AMBIENTE INICIAL</small><h1>Bem-vindo, {name}</h1><p>Autenticação conectada. Os módulos operacionais serão desenvolvidos sobre tabelas relacionais e regras transacionais.</p><p className="muted">Nenhum fluxo de embarque está liberado para uso nesta versão inicial.</p></section></main></div>;
+  return <div className="shell"><aside><div className="brand">SMAGA <em>Move</em></div><div className="muted">S.Magalhães & Essemaga</div><nav><button className={view === 'home' ? 'nav-item active' : 'nav-item'} onClick={() => setView('home')}>Visão geral</button>{isAdmin && <button className={view === 'users' ? 'nav-item active' : 'nav-item'} onClick={() => {setView('users'); void loadStaff();}}>Gestão de usuários</button>}<div>Operações — em construção</div><div>Motoristas — em construção</div><div>Chamada — em construção</div><div>Embarque — em construção</div></nav></aside><main className="workspace"><header><span>{view === 'users' ? 'Administração / Usuários' : 'Fundação do sistema'}</span><button className="secondary" onClick={() => supabase?.auth.signOut()}>Sair</button></header>{view === 'users' && isAdmin ? <section className="admin-area"><div className="admin-heading"><div><small>CONTROLE DE ACESSO</small><h1>Gestão de usuários</h1><p className="muted">Convide funcionários, atribua funções e gerencie setores.</p></div><button className="secondary" onClick={() => void loadStaff()} disabled={staffLoading}>Atualizar</button></div>{staffError && <p role="alert" className="error">{staffError}</p>}{staffNotice && <p role="status">{staffNotice}</p>}<section className="panel admin-panel"><h2>Convidar funcionário</h2><form onSubmit={e => {e.preventDefault();void manageStaff({action:'invite',email:inviteEmail,name:inviteName,role:inviteRole,sectors:inviteSectors});}}><div className="form-grid"><label>Nome<input required value={inviteName} maxLength={100} onChange={e => setInviteName(e.target.value)}/></label><label>E-mail<input type="email" required value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}/></label><label>Função<select value={inviteRole} onChange={e => setInviteRole(e.target.value)}>{Object.entries(roleNames).map(([key,label]) => <option key={key} value={key}>{label}</option>)}</select></label></div><fieldset><legend>Setores autorizados</legend>{Object.entries(sectorNames).map(([key,label]) => <label className="check-label" key={key}><input type="checkbox" checked={inviteSectors.includes(key)} onChange={e => setInviteSectors(old => e.target.checked ? [...old,key] : old.filter(x => x !== key))}/>{label}</label>)}</fieldset><button disabled={busy}>{busy ? 'Processando...' : 'Enviar convite'}</button></form></section><section className="panel admin-panel"><h2>Funcionários cadastrados</h2>{staffLoading ? <p>Carregando...</p> : staff.length === 0 ? <p className="muted">Nenhum funcionário disponível.</p> : <div className="staff-list">{staff.map(person => <div className="staff-row" key={person.id}><div><strong>{person.display_name || 'Sem nome'}</strong><div className="muted">{roleNames[person.role] || person.role} · {person.active ? 'Ativo' : 'Inativo'} · {person.profile_sectors?.map(s => sectorNames[s.sector] || s.sector).join(', ') || 'Sem setor'}</div></div><button className="secondary" onClick={() => setEditingId(editingId === person.id ? null : person.id)}>{editingId === person.id ? 'Cancelar' : 'Editar'}</button>{editingId === person.id && <form className="edit-form" key={person.id} onSubmit={e => {e.preventDefault();const fd=new FormData(e.currentTarget);void manageStaff({action:'update',id:person.id,name:String(fd.get('name')),role:String(fd.get('role')),active:fd.get('active') === 'on',sectors:fd.getAll('sectors')});}}><label>Nome<input name="name" required defaultValue={person.display_name}/></label><label>Função<select name="role" defaultValue={person.role}>{Object.entries(roleNames).map(([key,label]) => <option key={key} value={key}>{label}</option>)}</select></label><label className="check-label"><input type="checkbox" name="active" defaultChecked={person.active}/>Conta ativa</label><fieldset><legend>Setores</legend>{Object.entries(sectorNames).map(([key,label]) => <label className="check-label" key={key}><input type="checkbox" name="sectors" value={key} defaultChecked={person.profile_sectors?.some(s => s.sector === key)}/>{label}</label>)}</fieldset><button disabled={busy}>Salvar alterações</button></form>}</div>)}</div>}</section></section> : <section className="panel"><small>AMBIENTE INICIAL</small><h1>Bem-vindo, {name}</h1><p>Autenticação conectada. Os módulos operacionais serão desenvolvidos sobre tabelas relacionais e regras transacionais.</p><p className="muted">Nenhum fluxo de embarque está liberado para uso nesta versão inicial.</p></section>}</main></div>;
 }
 
 createRoot(document.getElementById('root')!).render(<React.StrictMode><App /></React.StrictMode>);
