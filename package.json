@@ -8,7 +8,7 @@
     "dev:operacional": "vite apps/operacional",
     "dev:admin": "vite apps/admin",
     "build": "npm run build:operacional",
-    "build:operacional": "tsc -p apps/operacional/tsconfig.json && vite build apps/operacional",
+    "build:operacional": "tsc -p apps/operacional/tsconfig.json && vite build apps/operacional --outDir ../../dist",
     "build:admin": "tsc -p apps/admin/tsconfig.json && vite build apps/admin",
     "typecheck": "tsc -p apps/operacional/tsconfig.json && tsc -p apps/admin/tsconfig.json",
     "preview:admin": "vite preview --outDir apps/admin/dist"
