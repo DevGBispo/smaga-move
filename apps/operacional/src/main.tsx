@@ -84,9 +84,9 @@ function App() {
     const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
     setBusy(false);
     if (updateError) { setError('Não foi possível atualizar a senha. Solicite um novo link se ele tiver expirado.'); return; }
-    setNewPassword(''); setConfirmPassword(''); setMode('login');
-    await supabase.auth.signOut();
-    setNotice('Senha atualizada. Entre novamente com sua nova senha.');
+    setNewPassword(''); setConfirmPassword(''); setPassword(''); setMode('login');
+    await supabase.auth.signOut({scope:'local'});
+    setNotice('Senha atualizada no Supabase. Digite manualmente a nova senha para entrar; não utilize uma senha antiga salva pelo navegador.');
     window.history.replaceState({}, '', window.location.pathname);
   }
 
@@ -100,7 +100,7 @@ function App() {
         email: email.trim(),
         password
       });
-      if (!authError) return;
+      if (!authError) { setPassword(''); return; }
       console.error('SMAGA Move - autenticação:', {
         name: authError.name,
         code: authError.code ?? null,
