@@ -3,8 +3,10 @@ import { createRoot } from 'react-dom/client';
 import type { Session } from '@supabase/supabase-js';
 import { supabase, configured } from './supabase';
 import './style.css';
+import {installGlobalErrorMonitoring} from './error-monitor';
 
 function App() {
+  useEffect(()=>installGlobalErrorMonitoring(supabase,'operacional'),[]);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState('');
