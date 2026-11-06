@@ -44,3 +44,6 @@ jobs:
 
       - name: Executar simulacao operacional sem banco
         run: node lab/demo.mjs
+
+      - name: Compilar interface independente do laboratorio
+        run: npm run lab:build
