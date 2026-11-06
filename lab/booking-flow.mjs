@@ -23,11 +23,11 @@ export function assignDriver(state,reference,driver,plate,actor='transporte'){
  const target=b.containers.find(c=>c.release==='liberado'&&c.movement==='aguardando'&&!c.driver);
  if(!target)return {ok:false,error:'Não há unidades liberadas disponíveis',state};
  const at=new Date().toISOString();
- return {ok:true,containerId:target.id,state:{...state,ships:state.ships.map(s=>s.id!==b.shipId?s:{...s,containers:s.containers.map(c=>c.id!==target.id?c:{...c,driver:name,plate:vehicle,movement:'em_transporte',calledAt:at})}),events:[...state.events,{at,actor,action:'motorista_chamado',shipId:b.shipId,containerId:target.id,reference,driver:name,plate:vehicle}]}};
+ return {ok:true,containerId:target.id,state:{...state,ships:state.ships.map(s=>s.id!==b.shipId?s:{...s,containers:s.containers.map(c=>c.id!==target.id?c:{...c,driver:name,plate:vehicle,movement:'chamado',calledAt:at})}),events:[...state.events,{at,actor,action:'motorista_chamado',shipId:b.shipId,containerId:target.id,reference,driver:name,plate:vehicle}]}};
 }
 export function completeLoad(state,reference,containerId,containerNumber,actor='transporte'){
  const b=bookings(state).find(b=>b.reference===reference),ct=b?.containers.find(c=>c.id===containerId);
- if(!ct||ct.movement!=='em_transporte')return {ok:false,error:'Motorista não está em transporte',state};
+ if(!ct||ct.movement!=='chamado')return {ok:false,error:'Motorista não está aguardando confirmação de embarque',state};
  const number=String(containerNumber||'').trim().toUpperCase();
  if(!number)return {ok:false,error:'Informe a unidade carregada',state};
  if(state.ships.some(s=>s.containers.some(c=>c.id!==containerId&&c.number===number)))return {ok:false,error:'Unidade já vinculada a outro carregamento',state};
@@ -35,3 +35,9 @@ export function completeLoad(state,reference,containerId,containerNumber,actor='
  return {ok:true,state:{...state,ships:state.ships.map(s=>s.id!==b.shipId?s:{...s,containers:s.containers.map(c=>c.id!==containerId?c:{...c,number,movement:'carregado',loadedAt:at})}),events:[...state.events,{at,actor,action:'carregamento_confirmado',shipId:b.shipId,containerId,reference,number}]}};
 }
 export function reportRows(state,reference){return bookings(state).find(b=>b.reference===reference)?.containers.filter(c=>c.driver).map(c=>({container:c.number||'Não informado',driver:c.driver,plate:c.plate,status:c.movement,calledAt:c.calledAt,loadedAt:c.loadedAt||''}))||[];}
+
+export function transportOverview(state){
+ const all=bookings(state),units=all.flatMap(b=>b.containers);
+ return {reservations:all.length,units:units.length,ready:units.filter(c=>c.release==='liberado'&&c.movement==='aguardando').length,called:units.filter(c=>c.movement==='chamado').length,loaded:units.filter(c=>c.movement==='carregado').length,pending:units.filter(c=>c.release!=='liberado'&&c.movement==='aguardando').length};
+}
+export function boardingQueue(state){return bookings(state).flatMap(b=>b.containers.filter(c=>c.movement==='chamado').map(c=>({...c,reference:b.reference,ship:b.ship,client:b.client,shipId:b.shipId})));}
