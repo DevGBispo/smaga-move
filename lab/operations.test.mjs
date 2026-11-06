@@ -7,3 +7,18 @@ test('reserva duplicada é rejeitada',()=>{const x=createReservation(initialStat
 test('transições sequenciais e auditoria',()=>{let x=createReservation(initialState(),draft);const id=x.reservation.id,ct=x.reservation.containers[0].id;assert.equal(advanceContainer(x.state,id,ct,'liberado').ok,false);for(const status of ['em_consolidacao','consolidado','liberado','em_transporte','entregue_terminal']){const y=advanceContainer(x.state,id,ct,status);assert.equal(y.ok,true);x=y;}assert.equal(x.state.events.length,6);assert.equal(summary(x.state).delivered,1);});
 test('indicadores agregam visão do gestor',()=>{const x=createReservation(initialState(),draft);const k=summary(x.state,new Date('2026-11-07T00:00:00Z'));assert.deepEqual(k,{reservations:1,containers:2,released:0,delivered:0,atRisk:1});});
 test('estado anterior permanece imutável',()=>{const x=createReservation(initialState(),draft);const y=advanceContainer(x.state,x.reservation.id,x.reservation.containers[0].id,'em_consolidacao');assert.equal(x.state.reservations[0].containers[0].status,'aguardando_carga');assert.equal(y.state.reservations[0].containers[0].status,'em_consolidacao');});
+
+import {transportQueue,deadlineRisk,operationAlerts} from './operations.mjs';
+test('fila de transporte contém apenas liberados',()=>{
+ let x=createReservation(initialState(),draft);const r=x.reservation,c=r.containers[0];for(const status of ['em_consolidacao','consolidado','liberado'])x=advanceContainer(x.state,r.id,c.id,status);
+ assert.equal(transportQueue(x.state).length,1);assert.equal(transportQueue(x.state)[0].containerId,c.id);
+ x=advanceContainer(x.state,r.id,c.id,'em_transporte');assert.equal(transportQueue(x.state).length,0);
+});
+test('alertas distinguem atenção, crítico, vencido e concluído',()=>{
+ const x=createReservation(initialState(),draft);const r=x.reservation;
+ assert.equal(deadlineRisk(r,new Date('2026-11-06T13:00:00')),'atencao');
+ assert.equal(deadlineRisk(r,new Date('2026-11-07T08:00:00')),'critica');
+ assert.equal(deadlineRisk(r,new Date('2026-11-08T08:00:00')),'vencida');
+ assert.equal(operationAlerts(x.state,new Date('2026-11-08T08:00:00')).length,1);
+ assert.equal(deadlineRisk({...r,containers:r.containers.map(c=>({...c,status:'entregue_terminal'}))},new Date('2026-11-08T08:00:00')),'concluida');
+});
