@@ -41,3 +41,17 @@ body.transport-view .queue-banner{background:linear-gradient(118deg,#073c2d,#0a6
 body.transport-view .queue-banner strong{font-size:26px;display:block}
 body.transport-view .queue-banner p{color:#c9e0d4;font-size:12px}
 @media(max-width:540px){body.transport-view h1{font-size:28px}body.transport-view .metric strong{font-size:25px}}
+
+/* Navegação funcional das três áreas do Transporte */
+body.transport-view .transport-nav{display:flex;gap:6px;flex-wrap:wrap;background:#edf1ee;padding:7px;border-radius:12px;margin:4px 0 22px}
+body.transport-view .transport-nav-btn{flex:1;min-width:165px;padding:14px 18px;border:0;border-radius:9px;background:transparent;color:#547262;font-weight:750;font-size:13px;cursor:pointer}
+body.transport-view .transport-nav-btn.active{background:#fff;color:#073c2d;box-shadow:0 3px 12px #073c2d13}
+body.transport-view .transport-nav-btn:focus-visible{outline:3px solid #20a768;outline-offset:2px}
+body.transport-view #operationPanel{min-height:400px}
+body.transport-view #boardingPanel .workitem{display:grid;grid-template-columns:minmax(170px,1fr) minmax(210px,2fr);align-items:center;gap:12px}
+body.transport-view #boardingPanel .inlineform{margin:0}
+body.transport-view #completedBoarding{margin-top:26px}
+body.transport-view #completedBoarding h3{margin-bottom:12px}
+body.transport-view #transMetrics{margin-bottom:20px}
+@media(max-width:750px){body.transport-view #boardingPanel .workitem{display:block}body.transport-view #boardingPanel .inlineform{margin-top:12px}}
+@media(max-width:540px){body.transport-view .transport-nav-btn{min-width:100%;text-align:left}}
