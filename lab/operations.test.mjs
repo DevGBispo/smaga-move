@@ -4,14 +4,14 @@ const draft={client:'Cliente Exemplo',reference:'RES-001',terminal:'BTP',deadlin
 test('criação gera contêineres individuais',()=>{const x=createReservation(initialState(),draft);assert.equal(x.ok,true);assert.equal(x.reservation.containers.length,2);assert.equal(x.state.events[0].action,'reserva_criada');});
 test('campos e quantidade obrigatórios',()=>{assert.equal(createReservation(initialState(),{...draft,quantity:0}).ok,false);assert.equal(createReservation(initialState(),{...draft,terminal:''}).ok,false);});
 test('reserva duplicada é rejeitada',()=>{const x=createReservation(initialState(),draft);assert.equal(createReservation(x.state,draft).ok,false);});
-test('transições sequenciais e auditoria',()=>{let x=createReservation(initialState(),draft);const id=x.reservation.id,ct=x.reservation.containers[0].id;assert.equal(advanceContainer(x.state,id,ct,'liberado').ok,false);for(const status of ['em_consolidacao','consolidado','liberado','em_transporte','entregue_terminal']){const y=advanceContainer(x.state,id,ct,status);assert.equal(y.ok,true);x=y;}assert.equal(x.state.events.length,6);assert.equal(summary(x.state).delivered,1);});
+test('transições sequenciais e auditoria',()=>{let x=createReservation(initialState(),draft);const id=x.reservation.id,ct=x.reservation.containers[0].id;assert.equal(advanceContainer(x.state,id,ct,'liberado').ok,false);for(const status of ['em_consolidacao','consolidado','liberado','em_transporte','entregue_terminal']){if(status==='em_transporte')x=setReleaseStatus(x.state,id,ct,'liberado');const y=advanceContainer(x.state,id,ct,status);assert.equal(y.ok,true);x=y;}assert.equal(x.state.events.length,6);assert.equal(summary(x.state).delivered,1);});
 test('indicadores agregam visão do gestor',()=>{const x=createReservation(initialState(),draft);const k=summary(x.state,new Date('2026-11-07T00:00:00Z'));assert.deepEqual(k,{reservations:1,containers:2,released:0,delivered:0,atRisk:1});});
 test('estado anterior permanece imutável',()=>{const x=createReservation(initialState(),draft);const y=advanceContainer(x.state,x.reservation.id,x.reservation.containers[0].id,'em_consolidacao');assert.equal(x.state.reservations[0].containers[0].status,'aguardando_carga');assert.equal(y.state.reservations[0].containers[0].status,'em_consolidacao');});
 
-import {transportQueue,deadlineRisk,operationAlerts} from './operations.mjs';
+import {transportQueue,deadlineRisk,operationAlerts,setReleaseStatus,dispatchTransport} from './operations.mjs';
 test('fila de transporte contém apenas liberados',()=>{
  let x=createReservation(initialState(),draft);const r=x.reservation,c=r.containers[0];for(const status of ['em_consolidacao','consolidado','liberado'])x=advanceContainer(x.state,r.id,c.id,status);
- assert.equal(transportQueue(x.state).length,1);assert.equal(transportQueue(x.state)[0].containerId,c.id);
+ x=setReleaseStatus(x.state,r.id,c.id,'liberado');assert.equal(transportQueue(x.state).length,1);assert.equal(transportQueue(x.state)[0].containerId,c.id);
  x=advanceContainer(x.state,r.id,c.id,'em_transporte');assert.equal(transportQueue(x.state).length,0);
 });
 test('alertas distinguem atenção, crítico, vencido e concluído',()=>{
@@ -21,4 +21,12 @@ test('alertas distinguem atenção, crítico, vencido e concluído',()=>{
  assert.equal(deadlineRisk(r,new Date('2026-11-08T08:00:00')),'vencida');
  assert.equal(operationAlerts(x.state,new Date('2026-11-08T08:00:00')).length,1);
  assert.equal(deadlineRisk({...r,containers:r.containers.map(c=>({...c,status:'entregue_terminal'}))},new Date('2026-11-08T08:00:00')),'concluida');
+});
+
+test('três decisões do atendente controlam fila de transporte',()=>{
+ let x=createReservation(initialState(),draft);const r=x.reservation,ct=r.containers[0].id;
+ for(const status of ['pendente','ag_liberacao']){x=setReleaseStatus(x.state,r.id,ct,status);assert.equal(x.ok,true);assert.equal(transportQueue(x.state).length,0);}
+ x=setReleaseStatus(x.state,r.id,ct,'liberado');assert.equal(transportQueue(x.state).length,1);
+ x=dispatchTransport(x.state,r.id,ct);assert.equal(x.ok,true);assert.equal(transportQueue(x.state).length,0);
+ assert.equal(setReleaseStatus(x.state,r.id,ct,'pendente').ok,false);
 });
