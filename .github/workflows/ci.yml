@@ -40,4 +40,4 @@ jobs:
       - name: Compilar projeto
         run: npm run build
       - name: Testar motor experimental de chamadas
-        run: node --test lab/transport-rules.test.mjs
+        run: node --test lab/*.test.mjs
