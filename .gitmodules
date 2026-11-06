@@ -1,4 +1,0 @@
-[submodule "transporte/controle-embarque"]
-	path = transporte/controle-embarque
-	url = https://github.com/DevGBispo/Smagalhaes.git
-	branch = feature/smaga-move-transporte-isolado
