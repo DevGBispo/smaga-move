@@ -14,13 +14,14 @@ export function createReservation(state,draft,actor='atendente') {
  if(state.reservations.some(r=>r.reference===reference))errors.push('Reserva já cadastrada');
  if(errors.length)return {ok:false,errors,state};
  const id='res-'+state.nextId,now=new Date().toISOString();
- const reservation={id,client,reference,terminal,deadline,quantity,owner:String(draft.owner||actor),containers:Array.from({length:quantity},(_,i)=>({id:id+'-ct-'+(i+1),number:'',status:'aguardando_carga'})),createdAt:now};
+ const reservation={id,client,reference,terminal,deadline,quantity,owner:String(draft.owner||actor),containers:Array.from({length:quantity},(_,i)=>({id:id+'-ct-'+(i+1),number:'',status:'aguardando_carga',releaseStatus:'ag_liberacao'})),createdAt:now};
  return {ok:true,reservation,state:{...state,nextId:state.nextId+1,reservations:[...state.reservations,reservation],events:[...state.events,{at:now,actor,action:'reserva_criada',reservationId:id}]}};
 }
 export function advanceContainer(state,reservationId,containerId,nextStatus,actor='atendente'){
  const reservation=state.reservations.find(r=>r.id===reservationId);
  const container=reservation?.containers.find(c=>c.id===containerId);
  if(!container)return {ok:false,error:'Contêiner inexistente',state};
+ if(nextStatus==='em_transporte'&&container.releaseStatus!=='liberado')return {ok:false,error:'Contêiner não liberado para transporte',state};
  if(!transitions[container.status].includes(nextStatus))return {ok:false,error:'Transição não permitida',state};
  const now=new Date().toISOString();
  return {ok:true,state:{...state,reservations:state.reservations.map(r=>r.id!==reservationId?r:{...r,containers:r.containers.map(c=>c.id!==containerId?c:{...c,status:nextStatus})}),events:[...state.events,{at:now,actor,action:'status_alterado',reservationId,containerId,from:container.status,to:nextStatus}]}};
@@ -33,7 +34,7 @@ export function initialState(){return {nextId:1,reservations:[],events:[]};}
 
 /** Fila de transporte: só contêiner liberado pode ser programado. */
 export function transportQueue(state){
- return state.reservations.flatMap(r=>r.containers.filter(c=>c.status==='liberado').map(c=>({reservationId:r.id,reference:r.reference,client:r.client,terminal:r.terminal,deadline:r.deadline,containerId:c.id,owner:r.owner})));
+ return state.reservations.flatMap(r=>r.containers.filter(c=>c.releaseStatus==='liberado'&&c.status!=='em_transporte'&&c.status!=='entregue_terminal').map(c=>({reservationId:r.id,reference:r.reference,client:r.client,terminal:r.terminal,deadline:r.deadline,containerId:c.id,owner:r.owner})));
 }
 export function deadlineRisk(reservation,now=new Date()){
  if(reservation.containers.every(c=>c.status==='entregue_terminal'))return 'concluida';
@@ -45,4 +46,14 @@ export function deadlineRisk(reservation,now=new Date()){
 }
 export function operationAlerts(state,now=new Date()){
  return state.reservations.map(r=>({reservationId:r.id,reference:r.reference,client:r.client,owner:r.owner,terminal:r.terminal,risk:deadlineRisk(r,now),pending:r.containers.filter(c=>c.status!=='entregue_terminal').length,readyForTransport:r.containers.filter(c=>c.status==='liberado').length})).filter(a=>a.risk!=='normal'&&a.risk!=='concluida').sort((a,b)=>({vencida:0,critica:1,atencao:2}[a.risk]-{vencida:0,critica:1,atencao:2}[b.risk]));
+}
+
+export const RELEASE_LABELS=Object.freeze({liberado:'Liberado',pendente:'Pendente',ag_liberacao:'Ag. liberação'});
+export function setReleaseStatus(state,reservationId,containerId,releaseStatus,actor='atendente'){
+ if(!Object.hasOwn(RELEASE_LABELS,releaseStatus))return {ok:false,error:'Situação de liberação inválida',state};
+ const r=state.reservations.find(r=>r.id===reservationId),container=r?.containers.find(c=>c.id===containerId);
+ if(!container)return {ok:false,error:'Contêiner inexistente',state};
+ if(container.status==='em_transporte'||container.status==='entregue_terminal')return {ok:false,error:'Não é possível alterar a liberação após o início do transporte',state};
+ const now=new Date().toISOString();
+ return {ok:true,state:{...state,reservations:state.reservations.map(r=>r.id!==reservationId?r:{...r,containers:r.containers.map(c=>c.id!==containerId?c:{...c,releaseStatus})}),events:[...state.events,{at:now,actor,action:'liberacao_alterada',reservationId,containerId,from:container.releaseStatus,to:releaseStatus}]}};
 }
