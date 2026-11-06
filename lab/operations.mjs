@@ -30,3 +30,19 @@ export function summary(state,now=new Date()){
  return {reservations:state.reservations.length,containers:containers.length,released:containers.filter(c=>['liberado','em_transporte','entregue_terminal'].includes(c.status)).length,delivered:containers.filter(c=>c.status==='entregue_terminal').length,atRisk:state.reservations.filter(r=>new Date(r.deadline).getTime()<now.getTime()+24*60*60*1000&&r.containers.some(c=>c.status!=='entregue_terminal')).length};
 }
 export function initialState(){return {nextId:1,reservations:[],events:[]};}
+
+/** Fila de transporte: só contêiner liberado pode ser programado. */
+export function transportQueue(state){
+ return state.reservations.flatMap(r=>r.containers.filter(c=>c.status==='liberado').map(c=>({reservationId:r.id,reference:r.reference,client:r.client,terminal:r.terminal,deadline:r.deadline,containerId:c.id,owner:r.owner})));
+}
+export function deadlineRisk(reservation,now=new Date()){
+ if(reservation.containers.every(c=>c.status==='entregue_terminal'))return 'concluida';
+ const remaining=new Date(reservation.deadline).getTime()-now.getTime();
+ if(remaining<0)return 'vencida';
+ if(remaining<=6*3600000)return 'critica';
+ if(remaining<=24*3600000)return 'atencao';
+ return 'normal';
+}
+export function operationAlerts(state,now=new Date()){
+ return state.reservations.map(r=>({reservationId:r.id,reference:r.reference,client:r.client,owner:r.owner,terminal:r.terminal,risk:deadlineRisk(r,now),pending:r.containers.filter(c=>c.status!=='entregue_terminal').length,readyForTransport:r.containers.filter(c=>c.status==='liberado').length})).filter(a=>a.risk!=='normal'&&a.risk!=='concluida').sort((a,b)=>({vencida:0,critica:1,atencao:2}[a.risk]-{vencida:0,critica:1,atencao:2}[b.risk]));
+}
