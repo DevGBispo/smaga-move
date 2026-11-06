@@ -23,3 +23,20 @@ Objetivo: validar regras em isolamento antes de integrar Supabase, interface e o
 3. Chamada com uma ou mais chapeiras é um registro de laboratório; ainda não consome posições da carteira.
 
 Não usar este motor em produção. A lógica completa do Controle de Embarque Smagalhães deverá ser especificada e comparada antes de qualquer integração.
+
+## Rodar o laboratório
+```bash
+node --test lab/*.test.mjs
+node lab/demo.mjs
+```
+O primeiro comando executa as verificações de lógica; o segundo simula uma operação BTP com carteira, chapeira bloqueada, passagem, chamada e confirmações. Os resultados são impressos em JSON, sem dados reais e sem qualquer conexão com Supabase ou Cloudflare.
+
+## Estados de motorista
+`sem` (pendente), `ok` (confirmado), `aberto`, `troca` e `gancho`.
+Para a contagem da rodada, `ok` e `troca` contam; todas as linhas precisam deixar de estar `sem` e a quantidade precisa ser atingida para concluir.
+Duas confirmações `ok` para a mesma chapeira, data e horário de carregamento são rejeitadas.
+
+## Publicação e limites
+O laboratório ainda é executado pelo Node.js e GitHub Actions, não possui URL de interface. Não exige deploy no Cloudflare.
+O Cloudflare Worker `smaga-move` deve ser vinculado à conta correta; falha de preview no PR não indica falha dos testes de Node.
+As regras implementadas são aproximações verificáveis do sistema original, ainda sujeitas a homologação.
