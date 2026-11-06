@@ -57,3 +57,11 @@ export function setReleaseStatus(state,reservationId,containerId,releaseStatus,a
  const now=new Date().toISOString();
  return {ok:true,state:{...state,reservations:state.reservations.map(r=>r.id!==reservationId?r:{...r,containers:r.containers.map(c=>c.id!==containerId?c:{...c,releaseStatus})}),events:[...state.events,{at:now,actor,action:'liberacao_alterada',reservationId,containerId,from:container.releaseStatus,to:releaseStatus}]}};
 }
+
+export function dispatchTransport(state,reservationId,containerId,actor='transporte'){
+ const r=state.reservations.find(r=>r.id===reservationId),c=r?.containers.find(c=>c.id===containerId);
+ if(!c)return {ok:false,error:'Contêiner inexistente',state};
+ if(c.releaseStatus!=='liberado'||c.status==='em_transporte'||c.status==='entregue_terminal')return {ok:false,error:'Contêiner indisponível para transporte',state};
+ const now=new Date().toISOString();
+ return {ok:true,state:{...state,reservations:state.reservations.map(r=>r.id!==reservationId?r:{...r,containers:r.containers.map(x=>x.id!==containerId?x:{...x,status:'em_transporte'})}),events:[...state.events,{at:now,actor,action:'transporte_iniciado',reservationId,containerId,from:c.status,to:'em_transporte'}]}};
+}
