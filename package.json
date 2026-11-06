@@ -11,7 +11,9 @@
     "build:operacional": "tsc -p apps/operacional/tsconfig.json && vite build apps/operacional --outDir ../../dist",
     "build:admin": "tsc -p apps/admin/tsconfig.json && vite build apps/admin",
     "typecheck": "tsc -p apps/operacional/tsconfig.json && tsc -p apps/admin/tsconfig.json",
-    "preview:admin": "vite preview --outDir apps/admin/dist"
+    "preview:admin": "vite preview --outDir apps/admin/dist",
+    "lab:dev": "vite lab --host 127.0.0.1",
+    "lab:build": "vite build --config lab/vite.config.mjs --outDir ../lab-dist"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.0",
