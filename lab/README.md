@@ -40,3 +40,7 @@ Duas confirmações `ok` para a mesma chapeira, data e horário de carregamento 
 O laboratório ainda é executado pelo Node.js e GitHub Actions, não possui URL de interface. Não exige deploy no Cloudflare.
 O Cloudflare Worker `smaga-move` deve ser vinculado à conta correta; falha de preview no PR não indica falha dos testes de Node.
 As regras implementadas são aproximações verificáveis do sistema original, ainda sujeitas a homologação.
+
+## Ambiente web de homologação
+Cloudflare Pages (projeto isolado): https://smaga-move-lab.pages.dev
+Branch de publicação: `feature/lab-motor-regras`; build `npm run lab:build`, saída `lab-dist`. A URL só deve ser distribuída após verificar que o primeiro deployment foi concluído e responde corretamente.
