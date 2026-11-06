@@ -41,3 +41,6 @@ jobs:
         run: npm run build
       - name: Testar motor experimental de chamadas
         run: node --test lab/*.test.mjs
+
+      - name: Executar simulacao operacional sem banco
+        run: node lab/demo.mjs
