@@ -13,7 +13,7 @@ A referência é a [prévia de testes no Sites](https://smagav3-previa.gabriellb
 | Faturamento | Seleção do setor nas quatro larguras | Pendente |
 | Atendente | Seleção do setor nas quatro larguras | Pendente |
 
-As capturas da tela inicial dos seis setores ficaram idênticas entre o build de referência e a rota de prévia nas quatro larguras. A comparação lado a lado de menus, estados vazios, erros e fluxos completos está pendente. Na Central de Chamadas, falta verificar seleção por reserva, sequência da Chapeira, prioridade em aberto, bloqueios, trocas, reposições, confirmações conflitantes, contagem e histórico.
+As capturas da tela inicial dos seis setores ficaram idênticas entre o build de referência e a raiz do build operacional nas quatro larguras. A comparação lado a lado de menus, estados vazios, erros e fluxos completos está pendente. Na Central de Chamadas, falta verificar seleção por reserva, sequência da Chapeira, prioridade em aberto, bloqueios, trocas, reposições, confirmações conflitantes, contagem e histórico.
 
 ## Testes executados
 
@@ -31,6 +31,10 @@ O projeto `bxjcnalrmglouciahzsp` foi verificado em modo de leitura. A URL e a ch
 
 A integração da V3 com o Supabase depende do código editável e dos testes específicos do build de referência, incluindo o seletor de setores e a camada de demonstração.
 
-## Layout da prévia no monorepo
+## HTML da V3 na raiz do operacional
 
-O build estático da versão 17 fica em `apps/operacional/public/previa-v3/` e é publicado pelo build operacional em `/previa-v3/`. Para inspecionar localmente, rode `npm run dev:operacional` e abra `/previa-v3/index.html` na URL informada pelo Vite. Os caminhos de assets foram ajustados para essa rota. O painel usa o seletor e os dados fictícios da prévia, com alterações descartadas ao recarregar. A paridade visual não implica integração com o Supabase.
+Os dez arquivos publicados do ZIP `SMAGA-MOVE-V3-Previa-Publicada.zip` estão em `apps/operacional/public/`. O Vite os serve na raiz e os copia para `dist/` sem alterações. Os hashes SHA-256 de todos os arquivos no build operacional coincidem com os do ZIP. Rode `npm run dev:operacional` e abra `/` na URL informada pelo Vite.
+
+O painel da V3 usa dados fictícios e descarta alterações ao recarregar, conforme o build de referência. O acesso Supabase anterior está em `/acesso.html`. Para a recuperação de senha nesse caminho em um deploy, inclua a URL de acesso na lista de redirecionamentos do Supabase Auth. O Admin continua em sua aplicação separada.
+
+A integração do painel V3 com autenticação, permissões e persistência permanece pendente. O HTML do ZIP não depende do ChatGPT Sites para executar.

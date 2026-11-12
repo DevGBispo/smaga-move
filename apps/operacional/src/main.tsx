@@ -68,7 +68,7 @@ function App() {
     event.preventDefault();
     if (!supabase || busy) return;
     setBusy(true); setError(''); setNotice('');
-    const { error: recoveryError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: window.location.origin + '/' });
+    const { error: recoveryError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: new URL('/acesso.html', window.location.origin).href });
     setBusy(false);
     if (recoveryError) setError('Não foi possível enviar o link. Verifique o e-mail ou tente novamente mais tarde.');
     else setNotice('Se o e-mail estiver cadastrado, você receberá um link para redefinir a senha.');
