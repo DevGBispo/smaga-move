@@ -13,7 +13,7 @@ A referência é a [prévia de testes no Sites](https://smagav3-previa.gabriellb
 | Faturamento | Seleção do setor nas quatro larguras | Pendente |
 | Atendente | Seleção do setor nas quatro larguras | Pendente |
 
-A comparação lado a lado de menus, estados vazios, erros e fluxos completos está pendente. Na Central de Chamadas, falta verificar seleção por reserva, sequência da Chapeira, prioridade em aberto, bloqueios, trocas, reposições, confirmações conflitantes, contagem e histórico.
+As capturas da tela inicial dos seis setores ficaram idênticas entre o build de referência e a rota de prévia nas quatro larguras. A comparação lado a lado de menus, estados vazios, erros e fluxos completos está pendente. Na Central de Chamadas, falta verificar seleção por reserva, sequência da Chapeira, prioridade em aberto, bloqueios, trocas, reposições, confirmações conflitantes, contagem e histórico.
 
 ## Testes executados
 
@@ -29,4 +29,8 @@ O projeto `bxjcnalrmglouciahzsp` foi verificado em modo de leitura. A URL e a ch
 - [Admin existente](https://smaga-admin.smaga-move.workers.dev)
 - [Laboratório de regras](https://smaga-move-lab.pages.dev)
 
-A entrega deste commit é a auditoria. A incorporação da V3 depende do código editável e dos testes específicos do build de referência, incluindo o seletor de setores e a camada de demonstração.
+A integração da V3 com o Supabase depende do código editável e dos testes específicos do build de referência, incluindo o seletor de setores e a camada de demonstração.
+
+## Layout da prévia no monorepo
+
+O build estático da versão 17 fica em `apps/operacional/public/previa-v3/` e é publicado pelo build operacional em `/previa-v3/`. Para inspecionar localmente, rode `npm run dev:operacional` e abra `/previa-v3/index.html` na URL informada pelo Vite. Os caminhos de assets foram ajustados para essa rota. O painel usa o seletor e os dados fictícios da prévia, com alterações descartadas ao recarregar. A paridade visual não implica integração com o Supabase.
