@@ -30,10 +30,18 @@ export function createReservationDesk({ jsx, jsxs, useState, useEffect, useRef, 
     const button = (label, onClick, className, extra = {}) => jsx("button", { type: "button", onClick, className, ...extra, children: label });
     const pill = (item) => jsx("span", { className: "rd-pill " + statusClass(item.status), children: item.status });
     const cell = (label, children) => jsx("td", { "data-label": label, children });
-    const fields = selected && [
-      ["Reserva", selected.code], ["Navio", selected.vessel], ["Terminal", selected.terminal],
-      ["Operação", selected.operation], ["Origem", selected.origin], ["Data", dateLabel(selected.date)],
-      ["Deadline", selected.deadline], ["Unidades", selected.units], ["Status", selected.status], ["Observações", selected.notes],
+    const details = (fields) => jsx("dl", { className: "rd-details", children: fields.map(([label, value]) =>
+      jsxs("div", { children: [jsx("dt", { children: label }), jsx("dd", { children: value === "" || value == null ? "—" : value })] }, label)
+    ) });
+    const summary = selected && [
+      ["Navio", selected.vessel], ["Deadline", selected.deadline], ["Status", pill(selected)],
+      ["Unidades", selected.units ?? (selected.q20 != null && selected.q40 != null ? Number(selected.q20) + Number(selected.q40) : null)],
+    ];
+    const programming = selected && [
+      ["Cliente", selected.client], ["Armador", selected.carrier], ["Terminal", selected.terminal],
+      ["Data da operação", dateLabel(selected.date)], ["Operação", selected.operation], ["Origem", selected.origin || selected.section],
+      ["Contêineres 20′", selected.q20], ["Contêineres 40′", selected.q40], ["Agendamento", selected.appointment],
+      ["Horário", selected.time], ["Gate", selected.gate], ["Período", selected.period], ["Local da operação", selected.local],
     ];
     return jsxs("section", { className: "rd", children: [
       jsxs("header", { className: "rd-bar", children: [
@@ -48,17 +56,27 @@ export function createReservationDesk({ jsx, jsxs, useState, useEffect, useRef, 
       activeMode && jsxs("dialog", {
         ref: dialogRef, className: "rd-drawer", "aria-labelledby": "rd-drawer-title",
         onCancel: (event) => { event.preventDefault(); open("", undefined); },
-        onClick: (event) => { if (event.target === event.currentTarget && event.clientX < event.currentTarget.getBoundingClientRect().left) open("", undefined); },
+        onClick: (event) => { if (event.target !== event.currentTarget) return;
+          const bounds = event.currentTarget.getBoundingClientRect();
+          if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) open("", undefined); },
         children: [
         jsxs("header", { className: "rd-drawer-header", children: [
-          jsx("h2", { id: "rd-drawer-title", children: activeMode === "view" ? "Detalhes da reserva" : selected ? "Editar reserva" : "Nova reserva" }),
+          jsxs("div", { children: [
+            jsx("p", { className: "rd-dialog-kicker", children: "Programação diária" }),
+            jsx("h2", { id: "rd-drawer-title", children: activeMode === "view" ? "Reserva " + (selected?.code ?? "") : selected ? "Editar reserva" : "Nova reserva" }),
+          ] }),
           button("Fechar", () => open("", undefined), "rd-link", { "aria-label": "Fechar painel da reserva" }),
         ] }),
         jsxs("div", { className: "rd-drawer-content", children: [
-        activeMode === "edit" ? form : fields && jsxs("div", { children: [
-          jsx("dl", { className: "rd-details", children: fields.map(([label, value]) => jsxs("div", { children: [jsx("dt", { children: label }), jsx("dd", { children: value || "—" })] }, label)) }),
-          button("Editar reserva", () => open("edit", selected.code), "rd-primary"),
-        ] }),
+          activeMode === "edit" ? form : selected && jsxs("div", { className: "rd-dialog-details", children: [
+            jsx("div", { className: "rd-dialog-summary", children: details(summary) }),
+            jsxs("section", { children: [jsx("h3", { children: "Dados da programação" }), details(programming)] }),
+            jsxs("section", { className: "rd-dialog-notes", children: [
+              jsx("h3", { children: "Observações operacionais" }),
+              jsx("p", { children: selected.notes || "Nenhuma observação registrada." }),
+            ] }),
+            jsx("footer", { className: "rd-dialog-footer", children: button("Editar reserva", () => open("edit", selected.code), "rd-primary") }),
+          ] }),
         ] }),
       ] }),
       jsxs("section", { className: "rd-list", "aria-label": "Lista de reservas", children: [
