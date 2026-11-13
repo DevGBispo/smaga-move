@@ -20,7 +20,10 @@ export function createReservationDesk({ jsx, jsxs, useState, useEffect, useRef, 
       if (!file) return;
       input.value = "";
       try {
-        const { reservations: rows } = JSON.parse(await file.text());
+        setImportMessage("Lendo programação…");
+        const rows = file.type === "application/pdf" || /\.pdf$/i.test(file.name)
+          ? await (await import("./programming-pdf.js")).readProgrammingPdf(file)
+          : JSON.parse(await file.text()).reservations;
         if (!Array.isArray(rows) || !rows.length) throw new Error("Arquivo sem reservas.");
         const keys = new Set();
         const imported = rows.map((row) => {
@@ -97,7 +100,7 @@ export function createReservationDesk({ jsx, jsxs, useState, useEffect, useRef, 
         jsxs("div", { className: "rd-header-actions", children: [
           jsx("input", { type: "search", placeholder: "Buscar reserva, navio ou terminal", "aria-label": "Buscar reservas", value: query, onChange: (event) => { setQuery(event.target.value); setPage(0); } }),
           jsxs("label", { className: "rd-secondary rd-import", children: [
-            "Importar programação", jsx("input", { type: "file", accept: ".json,application/json", className: "sr-only", onChange: importReservations }),
+            "Importar programação", jsx("input", { type: "file", accept: ".pdf,application/pdf,.json,application/json", className: "sr-only", onChange: importReservations }),
           ] }),
           button(jsxs("span", { children: [jsx(Plus, { size: 17, "aria-hidden": true }), " Nova reserva"] }), () => open("edit", undefined), "rd-primary"),
         ] }),
