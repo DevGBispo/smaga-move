@@ -11,9 +11,6 @@ const topics = ["Novo procedimento", "Alteração de procedimento", "Documentaç
 export function createOperationalCommunication({ jsx, jsxs, useState, useEffect, useRef }) {
   return function OperationalCommunication({ sector, author, reservations, notices, setNotices, compact = false }) {
     const [composing, setComposing] = useState(false);
-    const [recipientFilter, setRecipientFilter] = useState("");
-    const [dateFilter, setDateFilter] = useState("");
-    const [statusFilter, setStatusFilter] = useState("");
     const dialogRef = useRef(null);
     useEffect(() => {
       const dialog = dialogRef.current;
@@ -25,14 +22,11 @@ export function createOperationalCommunication({ jsx, jsxs, useState, useEffect,
     const allowed = sector === "atendimento" || sector === "gestor";
     const sentDate = (notice) => new Date(notice.createdAt).toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" });
     const formattedDate = (date) => date.split("-").reverse().join("/");
-    const statusOf = (notice) => notice.completed ? "Finalizada" : notice.readBy?.length ? "Visualizada" : "Enviada";
+    const statusOf = (notice) => notice.completed ? "Concluída" : "Em andamento";
     const received = (notice) => notice.recipient === sector || notice.recipient === "todos";
     const visible = notices.filter((notice) => compact
       ? received(notice) && !notice.completed && !notice.readBy?.includes(sector)
-      : (received(notice) || notice.sector === sector) &&
-        (!recipientFilter || notice.recipient === recipientFilter) &&
-        (!dateFilter || sentDate(notice) === dateFilter) &&
-        (!statusFilter || statusOf(notice) === statusFilter));
+      : received(notice) || notice.sector === sector);
     const updateNotice = (id, update) => setNotices((previous) => previous.map((notice) => notice.id === id ? update(notice) : notice));
     const groups = new Map();
     for (const notice of visible) {
@@ -56,7 +50,6 @@ export function createOperationalCommunication({ jsx, jsxs, useState, useEffect,
       const notice = { ...values, id: crypto.randomUUID(), sector, author, createdAt: new Date().toISOString() };
       setNotices((previous) => [notice, ...previous]);
       setComposing(false);
-      setRecipientFilter(""); setDateFilter(""); setStatusFilter("");
     }
     const field = (label, control, wide = false) => jsxs("label", { className: wide ? "oc-wide" : "", children: [label, control] });
     const option = (value, label = value) => jsx("option", { value, children: label }, value);
@@ -89,11 +82,6 @@ export function createOperationalCommunication({ jsx, jsxs, useState, useEffect,
           ] }),
         ],
       }),
-      !compact && jsxs("div", { className: "oc-filters", children: [
-        field("Setor destinatário", jsx("select", { value: recipientFilter, onChange: (event) => setRecipientFilter(event.target.value), children: [option("", "Todos os destinatários"), option("todos", "Avisos gerais"), ...Object.entries(sectors).map(([id, label]) => option(id, label))] })),
-        field("Data de envio", jsx("input", { type: "date", value: dateFilter, onChange: (event) => setDateFilter(event.target.value) })),
-        field("Situação", jsx("select", { value: statusFilter, onChange: (event) => setStatusFilter(event.target.value), children: [option("", "Todas as situações"), ...["Enviada", "Visualizada", "Finalizada"].map((value) => option(value))] })),
-      ] }),
       jsx("div", { className: "oc-feed", "aria-live": "polite", children: groups.size ? [...groups].map(([key, group]) => jsxs("section", {
         className: "oc-group",
         children: [
@@ -114,7 +102,7 @@ export function createOperationalCommunication({ jsx, jsxs, useState, useEffect,
             ] }),
           ] }, notice.id)),
         ],
-      }, key)) : jsx("p", { children: "Nenhuma mensagem neste recorte." }) }),
+      }, key)) : jsx("p", { children: "Nenhuma mensagem em andamento ou concluída." }) }),
     ] });
   };
 }
