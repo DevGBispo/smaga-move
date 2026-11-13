@@ -7,18 +7,26 @@ export function createReservationDesk({ jsx, jsxs, useState, useEffect, useRef, 
   return function ReservationDesk({ reservations, today, selected, select, form }) {
     const [query, setQuery] = useState("");
     const [date, setDate] = useState("");
+    const [terminal, setTerminal] = useState("");
     const [status, setStatus] = useState("");
     const [pageSize, setPageSize] = useState(5);
     const [page, setPage] = useState(0);
     const [mode, setMode] = useState("");
     const dialogRef = useRef(null);
     const filtered = reservations.filter((item) =>
-      (!date || item.date === date) && (!status || item.status === status) &&
+      (!terminal || item.terminal === terminal) && (!date || item.date === date) && (!status || item.status === status) &&
       normalize([item.code, item.vessel, item.terminal, item.origin].join(" ")).includes(normalize(query.trim()))
     ).sort((a, b) => a.date.localeCompare(b.date) || (a.deadline || "24:00").localeCompare(b.deadline || "24:00") || a.code.localeCompare(b.code));
     const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
     const activePage = Math.min(page, pageCount - 1);
-    const current = reservations.filter((item) => item.date === today).sort((a, b) => (a.deadline || "24:00").localeCompare(b.deadline || "24:00"));
+    const terminals = [...new Set(reservations.map((item) => item.terminal).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+    const metrics = [
+      ["", "Todas as reservas", reservations.length, "total"],
+      ...["Pendente", "Aguardando liberação", "Liberado"].map((value) => [
+        value, value === "Liberado" ? "Liberadas" : value === "Pendente" ? "Pendentes" : value,
+        reservations.filter((item) => item.status === value).length, statusClass(value),
+      ]),
+    ];
     const open = (next, code) => { select(code); setMode(next); };
     const activeMode = mode || (selected ? "view" : "");
     useEffect(() => {
@@ -44,15 +52,17 @@ export function createReservationDesk({ jsx, jsxs, useState, useEffect, useRef, 
       ["Horário", selected.time], ["Gate", selected.gate], ["Período", selected.period], ["Local da operação", selected.local],
     ];
     return jsxs("section", { className: "rd", children: [
-      jsxs("header", { className: "rd-bar", children: [
+      jsxs("header", { className: "rd-bar rd-page-header", children: [
         jsx("h1", { children: "Controle de Reservas" }),
-        button(jsxs("span", { children: [jsx(Plus, { size: 17, "aria-hidden": true }), " Nova reserva"] }), () => open("edit", undefined), "rd-primary"),
+        jsxs("div", { className: "rd-header-actions", children: [
+          jsx("input", { type: "search", placeholder: "Buscar reserva, navio ou terminal", "aria-label": "Buscar reservas", value: query, onChange: (event) => { setQuery(event.target.value); setPage(0); } }),
+          button(jsxs("span", { children: [jsx(Plus, { size: 17, "aria-hidden": true }), " Nova reserva"] }), () => open("edit", undefined), "rd-primary"),
+        ] }),
       ] }),
-      jsx("div", { className: "rd-metrics", children: [["Total de reservas", reservations.length, "total"], ...statuses.map((label) => [label === "Liberado" ? "Liberadas" : label === "Pendente" ? "Pendentes" : label, reservations.filter((item) => item.status === label).length, statusClass(label)])].map(([label, value, color]) => jsxs("div", { className: "rd-metric " + color, children: [jsx("strong", { children: value }), jsx("span", { children: label })] }, label)) }),
-      jsxs("section", { "aria-label": "Reservas de hoje", children: [
-        jsxs("div", { className: "rd-bar", children: [jsxs("h2", { children: ["Reservas de hoje ", jsx("small", { children: dateLabel(today) })] }), button("Ver todas de hoje", () => { setQuery(""); setStatus(""); setDate(today); setPage(0); }, "rd-link")] }),
-        current.length ? jsx("div", { className: "rd-today", children: current.slice(0, 5).map((item) => button(jsxs("span", { children: [jsxs("strong", { children: [item.code, jsx("small", { children: item.deadline || "—" })] }), jsx("span", { className: "rd-terminal", children: item.terminal }), pill(item), jsx("span", { className: "rd-status-line " + statusClass(item.status), "aria-hidden": true })] }), () => open("view", item.code), "rd-today-card", { key: item.code })) }) : jsx("p", { children: "Nenhuma reserva para hoje." }),
-      ] }),
+      jsx("div", { className: "rd-metrics", role: "group", "aria-label": "Filtrar por situação da reserva", children: metrics.map(([value, label, count, color]) =>
+        button(jsxs("span", { children: [jsx("span", { className: "rd-pill " + color, children: label }), jsx("strong", { children: count })] }),
+          () => { setStatus(value); setPage(0); }, "rd-metric " + color, { key: label, "aria-pressed": status === value })
+      ) }),
       activeMode && jsxs("dialog", {
         ref: dialogRef, className: "rd-drawer", "aria-labelledby": "rd-drawer-title",
         onCancel: (event) => { event.preventDefault(); open("", undefined); },
@@ -81,9 +91,10 @@ export function createReservationDesk({ jsx, jsxs, useState, useEffect, useRef, 
       ] }),
       jsxs("section", { className: "rd-list", "aria-label": "Lista de reservas", children: [
         jsxs("div", { className: "rd-bar", children: [
-          jsx("h2", { children: "Todas as reservas" }),
+          jsx("h2", { children: "Lista de reservas" }),
           jsxs("div", { className: "rd-filters", children: [
-            jsx("input", { type: "search", placeholder: "Buscar reserva, navio ou terminal", "aria-label": "Buscar reservas", value: query, onChange: (event) => { setQuery(event.target.value); setPage(0); } }),
+            jsx("select", { "aria-label": "Filtrar por terminal", value: terminal, onChange: (event) => { setTerminal(event.target.value); setPage(0); }, children: ["", ...terminals].map((value) => jsx("option", { value, children: value || "Todos os terminais" }, value)) }),
+            button("Hoje", () => { setDate(date === today ? "" : today); setPage(0); }, "rd-secondary", { "aria-pressed": date === today }),
             jsx("input", { type: "date", "aria-label": "Filtrar por data", value: date, onChange: (event) => { setDate(event.target.value); setPage(0); } }),
             jsx("select", { "aria-label": "Filtrar por status", value: status, onChange: (event) => { setStatus(event.target.value); setPage(0); }, children: ["", ...statuses].map((label) => jsx("option", { value: label, children: label || "Todos os status" }, label)) }),
           ] }),
@@ -93,7 +104,10 @@ export function createReservationDesk({ jsx, jsxs, useState, useEffect, useRef, 
           jsx("tbody", { children: filtered.slice(activePage * pageSize, (activePage + 1) * pageSize).map((item) => jsxs("tr", {
             onClick: (event) => { if (!event.target.closest("button")) open("view", item.code); },
             children: [
-            cell("Reserva / Navio", jsxs("span", { children: [jsx("strong", { children: item.code }), jsx("small", { children: item.vessel })] })),
+            cell("Reserva / Navio", jsxs("span", { className: "rd-reservation-id", children: [
+              jsx("span", { className: "rd-reservation-icon", "aria-hidden": true, children: item.operation === "Vazio" ? "V" : "C" }),
+              jsxs("span", { children: [jsx("strong", { children: item.code }), jsx("small", { children: item.vessel })] }),
+            ] })),
             cell("Terminal", item.terminal),
             cell("Data / Deadline", jsxs("span", { children: [dateLabel(item.date), jsx("small", { children: item.deadline || "Sem deadline" })] })),
             cell("Unidades", item.units),
