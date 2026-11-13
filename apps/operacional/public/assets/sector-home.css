@@ -9,16 +9,19 @@
 .move-home-cta:hover{background:#ffffff21}
 .move-home-tasks,.move-operational-details{background:#fff;border:1px solid #dce7df;border-radius:15px;padding:clamp(12px,2vw,20px)}
 .move-home-tasks h2{margin:0 0 10px;font-size:1.1rem;font-weight:760;letter-spacing:-.02em;color:#15372a}
-.move-home-task-list{list-style:none;margin:0;padding:0;display:grid;gap:4px}
-.move-home-task,.move-home-links button{width:100%;min-height:52px;display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:10px;padding:6px 9px;border:1px solid transparent;border-radius:10px;background:#fff;color:#15372a;text-align:left}
-.move-home-task[data-priority=true]{background:#edf5e3}
-.move-home-task:hover,.move-home-links button:hover{background:#f1f6f1;border-color:#b6ccba}
+.move-home-task-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.move-home-task-list>li{min-width:0}
+.move-home-task{width:100%;height:100%;min-height:126px;display:grid;align-content:start;gap:8px;padding:13px;border:1px solid #dce7df;border-radius:12px;background:#fff;color:#15372a;text-align:left}
+.move-home-task[data-priority=true]{background:#edf5e3;border-color:#cfe1be}
+.move-home-task:hover{background:#f1f6f1;border-color:#a6c4ad}
+.move-home-card-top{display:flex;justify-content:space-between;align-items:center;gap:8px;color:#245d40}
 .move-home-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:8px;background:#e6f1e3;color:#245d40}
 .move-home-task-label{font-weight:660;overflow-wrap:anywhere}
-.move-home-task-count{font-size:.95rem;font-variant-numeric:tabular-nums;background:#fff;border:1px solid #d9e7db;border-radius:999px;min-width:29px;text-align:center;padding:3px 6px}
-.move-home-empty{margin:0;color:#436051}
-.move-home-links{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:8px}
-.move-home-links button{grid-template-columns:auto minmax(0,1fr) auto;border-color:#dce7df}
+.move-home-task-count{font-size:1.7rem;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.04em}
+.move-home-shortcut small{color:#436051;line-height:1.35}
+.move-home-empty{margin:0 0 10px;color:#436051}
+@media(max-width:1000px){.move-home-task-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:460px){.move-home-task-list{grid-template-columns:minmax(0,1fr)}.move-home-task{min-height:0}}
 .move-home button:focus-visible,.move-operational-details summary:focus-visible{outline:2px solid #6f9b43;outline-offset:2px}
 .move-operational-details summary{cursor:pointer;color:#24553c;font-weight:700}
 .move-operational-details>div{padding-top:14px}
