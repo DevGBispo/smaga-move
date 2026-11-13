@@ -3,7 +3,7 @@ const dateLabel = (date) => date?.split("-").reverse().join("/") || "—";
 const statusClass = (status) => ({ Liberado: "released", Pendente: "pending", "Aguardando liberação": "waiting" })[status] || "";
 const normalize = (value) => String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
-export function createReservationDesk({ jsx, jsxs, useState, Arrow, Plus }) {
+export function createReservationDesk({ jsx, jsxs, useState, useEffect, useRef, Plus }) {
   return function ReservationDesk({ reservations, today, selected, select, form }) {
     const [query, setQuery] = useState("");
     const [date, setDate] = useState("");
@@ -11,6 +11,7 @@ export function createReservationDesk({ jsx, jsxs, useState, Arrow, Plus }) {
     const [pageSize, setPageSize] = useState(5);
     const [page, setPage] = useState(0);
     const [mode, setMode] = useState("");
+    const dialogRef = useRef(null);
     const filtered = reservations.filter((item) =>
       (!date || item.date === date) && (!status || item.status === status) &&
       normalize([item.code, item.vessel, item.terminal, item.origin].join(" ")).includes(normalize(query.trim()))
@@ -19,7 +20,13 @@ export function createReservationDesk({ jsx, jsxs, useState, Arrow, Plus }) {
     const activePage = Math.min(page, pageCount - 1);
     const current = reservations.filter((item) => item.date === today).sort((a, b) => (a.deadline || "24:00").localeCompare(b.deadline || "24:00"));
     const open = (next, code) => { select(code); setMode(next); };
-    const activeMode = mode || (selected ? "edit" : "");
+    const activeMode = mode || (selected ? "view" : "");
+    useEffect(() => {
+      const dialog = dialogRef.current;
+      if (!dialog || dialog.open) return;
+      dialog.showModal();
+      return () => { if (dialog.open) dialog.close(); };
+    }, [Boolean(activeMode)]);
     const button = (label, onClick, className, extra = {}) => jsx("button", { type: "button", onClick, className, ...extra, children: label });
     const pill = (item) => jsx("span", { className: "rd-pill " + statusClass(item.status), children: item.status });
     const cell = (label, children) => jsx("td", { "data-label": label, children });
@@ -38,11 +45,20 @@ export function createReservationDesk({ jsx, jsxs, useState, Arrow, Plus }) {
         jsxs("div", { className: "rd-bar", children: [jsxs("h2", { children: ["Reservas de hoje ", jsx("small", { children: dateLabel(today) })] }), button("Ver todas de hoje", () => { setQuery(""); setStatus(""); setDate(today); setPage(0); }, "rd-link")] }),
         current.length ? jsx("div", { className: "rd-today", children: current.slice(0, 5).map((item) => button(jsxs("span", { children: [jsxs("strong", { children: [item.code, jsx("small", { children: item.deadline || "—" })] }), jsx("span", { className: "rd-terminal", children: item.terminal }), pill(item), jsx("span", { className: "rd-status-line " + statusClass(item.status), "aria-hidden": true })] }), () => open("view", item.code), "rd-today-card", { key: item.code })) }) : jsx("p", { children: "Nenhuma reserva para hoje." }),
       ] }),
-      activeMode && jsxs("section", { className: "rd-editor", "aria-label": activeMode === "view" ? "Detalhes da reserva" : "Formulário de reserva", children: [
-        jsxs("div", { className: "rd-bar", children: [activeMode === "view" && jsx("h2", { children: "Detalhes da reserva" }), button("Fechar", () => open("", undefined), "rd-link")] }),
+      activeMode && jsxs("dialog", {
+        ref: dialogRef, className: "rd-drawer", "aria-labelledby": "rd-drawer-title",
+        onCancel: (event) => { event.preventDefault(); open("", undefined); },
+        onClick: (event) => { if (event.target === event.currentTarget && event.clientX < event.currentTarget.getBoundingClientRect().left) open("", undefined); },
+        children: [
+        jsxs("header", { className: "rd-drawer-header", children: [
+          jsx("h2", { id: "rd-drawer-title", children: activeMode === "view" ? "Detalhes da reserva" : selected ? "Editar reserva" : "Nova reserva" }),
+          button("Fechar", () => open("", undefined), "rd-link", { "aria-label": "Fechar painel da reserva" }),
+        ] }),
+        jsxs("div", { className: "rd-drawer-content", children: [
         activeMode === "edit" ? form : fields && jsxs("div", { children: [
           jsx("dl", { className: "rd-details", children: fields.map(([label, value]) => jsxs("div", { children: [jsx("dt", { children: label }), jsx("dd", { children: value || "—" })] }, label)) }),
           button("Editar reserva", () => open("edit", selected.code), "rd-primary"),
+        ] }),
         ] }),
       ] }),
       jsxs("section", { className: "rd-list", "aria-label": "Lista de reservas", children: [
@@ -56,7 +72,9 @@ export function createReservationDesk({ jsx, jsxs, useState, Arrow, Plus }) {
         ] }),
         filtered.length ? jsx("div", { className: "rd-table-wrap", children: jsxs("table", { "aria-label": "Reservas", children: [
           jsx("thead", { children: jsx("tr", { children: ["Reserva / Navio", "Terminal", "Data / Deadline", "Unidades", "Operação", "Status", "Ações"].map((label) => jsx("th", { scope: "col", children: label }, label)) }) }),
-          jsx("tbody", { children: filtered.slice(activePage * pageSize, (activePage + 1) * pageSize).map((item) => jsxs("tr", { children: [
+          jsx("tbody", { children: filtered.slice(activePage * pageSize, (activePage + 1) * pageSize).map((item) => jsxs("tr", {
+            onClick: (event) => { if (!event.target.closest("button")) open("view", item.code); },
+            children: [
             cell("Reserva / Navio", jsxs("span", { children: [jsx("strong", { children: item.code }), jsx("small", { children: item.vessel })] })),
             cell("Terminal", item.terminal),
             cell("Data / Deadline", jsxs("span", { children: [dateLabel(item.date), jsx("small", { children: item.deadline || "Sem deadline" })] })),

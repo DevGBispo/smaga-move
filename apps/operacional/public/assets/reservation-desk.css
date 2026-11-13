@@ -10,3 +10,13 @@
 .rd-filters>* ,.rd-pagination select{min-width:0;padding:6px 9px;border:1px solid #d7e3da;border-radius:8px;background:#f8faf9;color:#173529}
 .rd-table-wrap{overflow-x:auto;border:1px solid #e0ebe4;border-radius:10px}.rd table{width:100%;border-collapse:collapse;text-align:left}.rd th,.rd td{padding:9px;border-bottom:1px solid #e5ede7;font-size:.83rem;overflow-wrap:anywhere}.rd th{background:#f5f8f6}.rd td small{display:block;color:#496252}.rd tbody tr:last-child td{border-bottom:0}.rd-pagination{margin:10px 0 0}.rd-editor{padding:12px;border:1px solid #cbded1;border-radius:10px}.rd-editor>.rd-bar{justify-content:flex-end}.rd-details{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:0 0 12px}.rd-details dt{font-size:.76rem;color:#466354}.rd-details dd{margin:0;overflow-wrap:anywhere}
 @media(max-width:720px){.rd-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.rd-filters{width:100%}.rd-filters input[type=search]{width:100%}.rd-table-wrap{border:0}.rd table,.rd tbody{display:block}.rd thead{position:absolute;clip-path:inset(50%);width:1px;height:1px;overflow:hidden}.rd tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:8px;border:1px solid #e0ebe4;border-radius:9px;padding:5px}.rd td{display:block;padding:5px;border:0}.rd td::before{content:attr(data-label);display:block;font-size:.7rem;color:#496252}.rd td:first-child,.rd td:last-child{grid-column:1/-1}.rd button,.rd input,.rd select{min-height:44px}.rd input,.rd select{font-size:16px}}
+.rd tbody tr{cursor:pointer}
+@media(hover:hover){.rd tbody tr:hover,.rd-today-card:hover{background:#edf8f1}.rd-today-card:hover{border-color:#77b695}}
+.rd tbody tr:focus-within{background:#edf8f1}
+.rd-drawer{position:fixed;inset:0 0 0 auto;margin:0;width:50vw;max-width:none;height:100dvh;max-height:none;overflow:auto;overscroll-behavior:contain;border:0;border-left:1px solid #d7e3da;border-radius:16px 0 0 16px;padding:0;background:#fff;color:#173529;box-shadow:-16px 0 60px #09291b30}
+.rd-drawer::backdrop{background:#0d291e65}
+.rd-drawer-header{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:max(14px,env(safe-area-inset-top)) 20px 12px;background:#fff;border-bottom:1px solid #e0ebe4;z-index:1}
+.rd-drawer-content{padding:20px 20px max(20px,env(safe-area-inset-bottom))}
+.rd-drawer .rd-details{margin-bottom:20px}
+.rd-drawer .rd-details dd{white-space:pre-wrap}
+@media(max-width:767px){.rd-drawer{width:100%;border-radius:0}.rd-drawer-content{padding-inline:14px}}
