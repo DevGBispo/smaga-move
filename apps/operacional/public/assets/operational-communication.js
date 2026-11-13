@@ -8,11 +8,38 @@ const sectors = {
 };
 const topics = ["Novo procedimento", "Alteração de procedimento", "Documentação", "Prazo ou agendamento", "Outro aviso operacional"];
 
-export function createOperationalCommunication({ jsx, jsxs }) {
+export function createOperationalCommunication({ jsx, jsxs, useState, useEffect, useRef }) {
   return function OperationalCommunication({ sector, author, reservations, notices, setNotices, compact = false }) {
+    const [composing, setComposing] = useState(false);
+    const [recipientFilter, setRecipientFilter] = useState("");
+    const [dateFilter, setDateFilter] = useState("");
+    const [statusFilter, setStatusFilter] = useState("");
+    const dialogRef = useRef(null);
+    useEffect(() => {
+      const dialog = dialogRef.current;
+      if (!composing || !dialog) return;
+      dialog.showModal();
+      return () => dialog.close();
+    }, [composing]);
     const clients = [...new Set(reservations.map((item) => item.client?.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR"));
     const allowed = sector === "atendimento" || sector === "gestor";
-    const visible = notices.filter((notice) => notice.recipient === sector || notice.recipient === "todos" || (!compact && notice.sector === sector));
+    const sentDate = (notice) => new Date(notice.createdAt).toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" });
+    const formattedDate = (date) => date.split("-").reverse().join("/");
+    const statusOf = (notice) => notice.completed ? "Finalizada" : notice.readBy?.length ? "Visualizada" : "Enviada";
+    const received = (notice) => notice.recipient === sector || notice.recipient === "todos";
+    const visible = notices.filter((notice) => compact
+      ? received(notice) && !notice.completed && !notice.readBy?.includes(sector)
+      : (received(notice) || notice.sector === sector) &&
+        (!recipientFilter || notice.recipient === recipientFilter) &&
+        (!dateFilter || sentDate(notice) === dateFilter) &&
+        (!statusFilter || statusOf(notice) === statusFilter));
+    const updateNotice = (id, update) => setNotices((previous) => previous.map((notice) => notice.id === id ? update(notice) : notice));
+    const groups = new Map();
+    for (const notice of visible) {
+      const key = sentDate(notice) + "|" + notice.recipient;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(notice);
+    }
     function publish(event) {
       event.preventDefault();
       if (!allowed) return;
@@ -28,15 +55,27 @@ export function createOperationalCommunication({ jsx, jsxs }) {
       if (!(values.recipient in sectors) && values.recipient !== "todos" || !topics.includes(values.topic)) return;
       const notice = { ...values, id: crypto.randomUUID(), sector, author, createdAt: new Date().toISOString() };
       setNotices((previous) => [notice, ...previous]);
-      form.reset();
+      setComposing(false);
+      setRecipientFilter(""); setDateFilter(""); setStatusFilter("");
     }
     const field = (label, control, wide = false) => jsxs("label", { className: wide ? "oc-wide" : "", children: [label, control] });
     const option = (value, label = value) => jsx("option", { value, children: label }, value);
     const resetValidation = (event) => event.currentTarget.setCustomValidity("");
     if (compact && !visible.length) return null;
     return jsxs("section", { className: "oc", "aria-label": "Comunicação operacional", children: [
-      jsx(compact ? "h2" : "h1", { children: compact ? "Avisos para o seu setor" : "Comunicação" }),
-      !compact && allowed && jsxs("form", { onSubmit: publish, children: [
+      jsxs("header", { className: "oc-header", children: [
+        jsx(compact ? "h2" : "h1", { children: compact ? "Avisos para o seu setor" : "Comunicação" }),
+        !compact && allowed && jsx("button", { type: "button", onClick: () => setComposing(true), children: "Nova mensagem" }),
+      ] }),
+      !compact && composing && allowed && jsxs("dialog", {
+        ref: dialogRef, className: "oc-dialog", "aria-labelledby": "oc-compose-title",
+        onCancel: (event) => { event.preventDefault(); setComposing(false); },
+        children: [
+          jsxs("header", { className: "oc-header", children: [
+            jsx("h2", { id: "oc-compose-title", children: "Nova mensagem" }),
+            jsx("button", { type: "button", onClick: () => setComposing(false), children: "Fechar" }),
+          ] }),
+          jsxs("form", { onSubmit: publish, children: [
         field("Setor destinatário", jsxs("select", { name: "recipient", required: true, defaultValue: "", children: [
           option("", "Selecione o setor"), option("todos", "Todos os setores"), ...Object.entries(sectors).map(([id, label]) => option(id, label)),
         ] })),
@@ -47,17 +86,35 @@ export function createOperationalCommunication({ jsx, jsxs }) {
         field("Título do aviso", jsx("input", { name: "title", required: true, maxLength: 120, placeholder: "Ex.: Novo padrão para envio do romaneio", onInput: resetValidation }), true),
         field("Instruções operacionais", jsx("textarea", { name: "instructions", required: true, rows: 4, maxLength: 4000, placeholder: "Descreva a mudança, os passos a seguir e os documentos necessários.", onInput: resetValidation }), true),
         jsx("div", { className: "oc-wide oc-actions", children: jsx("button", { type: "submit", children: "Publicar aviso" }) }),
+          ] }),
+        ],
+      }),
+      !compact && jsxs("div", { className: "oc-filters", children: [
+        field("Setor destinatário", jsx("select", { value: recipientFilter, onChange: (event) => setRecipientFilter(event.target.value), children: [option("", "Todos os destinatários"), option("todos", "Avisos gerais"), ...Object.entries(sectors).map(([id, label]) => option(id, label))] })),
+        field("Data de envio", jsx("input", { type: "date", value: dateFilter, onChange: (event) => setDateFilter(event.target.value) })),
+        field("Situação", jsx("select", { value: statusFilter, onChange: (event) => setStatusFilter(event.target.value), children: [option("", "Todas as situações"), ...["Enviada", "Visualizada", "Finalizada"].map((value) => option(value))] })),
       ] }),
-      jsxs("div", { className: "oc-feed", "aria-live": "polite", children: [
-        !compact && jsx("h2", { children: "Avisos da sessão" }),
-        visible.length ? visible.map((notice) => jsxs("article", { children: [
-          jsx("span", { className: "oc-topic", children: notice.topic }),
-          jsx("h3", { children: notice.title }),
-          jsx("p", { className: "oc-meta", children: [sectors[notice.sector], notice.author, notice.recipient === "todos" ? "Todos os setores" : "Para " + sectors[notice.recipient], notice.client || "Orientação geral"].filter(Boolean).join(" · ") }),
-          notice.effectiveDate && jsx("p", { className: "oc-meta", children: "Válido a partir de " + notice.effectiveDate.split("-").reverse().join("/") }),
-          jsx("p", { className: "oc-instructions", children: notice.instructions }),
-        ] }, notice.id)) : jsx("p", { children: "Nenhum aviso publicado nesta sessão." }),
-      ] }),
+      jsx("div", { className: "oc-feed", "aria-live": "polite", children: groups.size ? [...groups].map(([key, group]) => jsxs("section", {
+        className: "oc-group",
+        children: [
+          jsx("h2", { children: formattedDate(sentDate(group[0])) + " · " + (group[0].recipient === "todos" ? "Todos os setores" : sectors[group[0].recipient]) }),
+          ...group.map((notice) => jsxs("article", { children: [
+            jsxs("div", { className: "oc-header", children: [
+              jsx("span", { className: "oc-topic", children: notice.topic }),
+              jsx("span", { className: "oc-status", children: statusOf(notice) }),
+            ] }),
+            jsx("h3", { children: notice.title }),
+            jsx("p", { className: "oc-meta", children: [sectors[notice.sector], notice.author, notice.client || "Orientação geral"].filter(Boolean).join(" · ") }),
+            notice.effectiveDate && jsx("p", { className: "oc-meta", children: "Válido a partir de " + formattedDate(notice.effectiveDate) }),
+            jsx("p", { className: "oc-instructions", children: notice.instructions }),
+            notice.readBy?.length > 0 && jsx("p", { className: "oc-meta", children: "Visualizada por " + notice.readBy.map((id) => sectors[id]).join(", ") }),
+            jsxs("div", { className: "oc-message-actions", children: [
+              !notice.completed && received(notice) && !notice.readBy?.includes(sector) && jsx("button", { type: "button", onClick: () => updateNotice(notice.id, (item) => ({ ...item, readBy: [...new Set([...(item.readBy ?? []), sector])] })), children: "Marcar como visualizada" }),
+              !compact && !notice.completed && (notice.sector === sector || sector === "gestor") && jsx("button", { type: "button", onClick: () => updateNotice(notice.id, (item) => ({ ...item, completed: true })), children: "Finalizar mensagem" }),
+            ] }),
+          ] }, notice.id)),
+        ],
+      }, key)) : jsx("p", { children: "Nenhuma mensagem neste recorte." }) }),
     ] });
   };
 }

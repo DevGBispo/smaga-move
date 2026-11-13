@@ -22,3 +22,14 @@
 .move-home-cta:focus-visible,.move-home-links button:focus-visible{outline:2px solid #84bc43;outline-offset:3px}
 .move-home-insights{margin:20px 0 0;color:#123f2c;font-size:1.15rem;font-weight:800}
 @media(max-width:760px){.move-home-hero{grid-template-columns:minmax(0,1fr);gap:18px}.move-home-hero h1{font-size:clamp(2.1rem,9vw,3.5rem)}}
+.move-home-hero{display:block;padding:clamp(20px,3vw,36px)}
+.move-home-hero h1{font-size:clamp(2rem,4vw,3.5rem)}
+.move-home-tasks{margin-top:16px;padding:clamp(12px,2vw,20px);border-radius:20px;background:#edf1ec}
+.move-home-tasks h2{margin:0 0 10px;color:#123f2c;font-size:1.05rem;font-weight:800}
+.move-home-task-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,185px),1fr));gap:10px}
+.move-home-task{display:grid;align-content:space-between;gap:12px;min-height:106px;border:1px solid #dae5db;border-radius:16px;padding:14px;background:#fff;color:#143d27;text-align:left}
+.move-home-task[data-priority=true]{background:#c8ef9d;border-color:#afda7b}
+.move-home-task:hover{border-color:#3e8054}.move-home-task:focus-visible{outline:2px solid #2e7548;outline-offset:2px}
+.move-home-task-label{font-size:.88rem;font-weight:750}
+.move-home-task-footer{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.move-home-task-footer strong{font-size:1.65rem;line-height:1;font-variant-numeric:tabular-nums}

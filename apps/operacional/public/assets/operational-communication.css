@@ -11,3 +11,12 @@
 .oc-topic{justify-self:start;padding:3px 9px;border-radius:999px;background:#e1f3e8;color:#225d3e;font-size:.75rem;font-weight:750}
 .oc-meta{font-size:.8rem;color:#4a6558}.oc-instructions{white-space:pre-wrap;overflow-wrap:anywhere}
 @media(max-width:600px){.oc form{grid-template-columns:minmax(0,1fr)}}
+.oc-header,.oc-message-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.oc-message-actions{justify-content:flex-start}.oc-message-actions:empty{display:none}
+.oc-message-actions button,.oc-dialog>.oc-header button{background:#eef6f0;color:#205b3b}
+.oc-filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,145px),1fr));gap:10px}
+.oc-dialog{position:fixed;inset:0;margin:auto;width:min(720px,calc(100% - 24px));max-height:calc(100dvh - 24px);overflow:auto;border:1px solid #dce8e0;border-radius:18px;background:#fff;padding:16px;color:#173529}
+.oc-dialog::backdrop{background:#122d216e}
+.oc-dialog>.oc-header{margin-bottom:12px}
+.oc-group{display:grid;gap:8px}
+.oc-status{font-size:.75rem;font-weight:750;color:#225d3e;background:#f0f3ed;border-radius:999px;padding:3px 9px}
