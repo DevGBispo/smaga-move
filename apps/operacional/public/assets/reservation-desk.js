@@ -4,7 +4,7 @@ const statusClass = (status) => ({ Liberado: "released", Pendente: "pending", "A
 const normalize = (value) => String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 export function createReservationDesk({ jsx, jsxs, useState, useEffect, useRef, Plus }) {
-  return function ReservationDesk({ reservations, today, selected, select, form }) {
+  return function ReservationDesk({ reservations, today, selected, select, setReservations, form }) {
     const [query, setQuery] = useState("");
     const [date, setDate] = useState("");
     const [terminal, setTerminal] = useState("");
@@ -13,6 +13,46 @@ export function createReservationDesk({ jsx, jsxs, useState, useEffect, useRef, 
     const [page, setPage] = useState(0);
     const [mode, setMode] = useState("");
     const dialogRef = useRef(null);
+    const [importMessage, setImportMessage] = useState("");
+    async function importReservations(event) {
+      const input = event.currentTarget;
+      const file = input.files?.[0];
+      if (!file) return;
+      input.value = "";
+      try {
+        const { reservations: rows } = JSON.parse(await file.text());
+        if (!Array.isArray(rows) || !rows.length) throw new Error("Arquivo sem reservas.");
+        const keys = new Set();
+        const imported = rows.map((row) => {
+          if (!row || typeof row !== "object") throw new Error("Reserva inválida.");
+          const item = Object.fromEntries(["code", "vessel", "carrier", "client", "terminal", "date", "deadline", "notes", "origin", "operation", "status"]
+            .map((key) => [key, typeof row[key] === "string" ? row[key].trim() : ""]));
+          const key = item.code.toUpperCase();
+          if (!key || keys.has(key) || !item.vessel || !item.terminal || !["Cheio", "Vazio"].includes(item.operation) ||
+              !statuses.includes(item.status) || (item.date && !/^\d{4}-\d{2}-\d{2}$/.test(item.date)) ||
+              (item.deadline && !/^([01]\d|2[0-3]):[0-5]\d$/.test(item.deadline)) ||
+              ![row.q20, row.q40].every((value) => Number.isSafeInteger(value) && value >= 0)) {
+            throw new Error("Verifique o código, os campos e as quantidades das reservas.");
+          }
+          keys.add(key);
+          return { ...item, q20: row.q20, q40: row.q40, units: row.q20 + row.q40,
+            containers: Array.isArray(row.containers) ? row.containers.filter((value) => typeof value === "string") : [] };
+        });
+        setReservations((existing) => {
+          const merged = new Map(existing.filter((item) => !/^EBKG-TESTE-0[1-4]$/.test(item.code)).map((item) => [item.code.toUpperCase(), item]));
+          for (const item of imported) {
+            const prior = merged.get(item.code.toUpperCase());
+            merged.set(item.code.toUpperCase(), { ...prior, ...item, code: prior?.code ?? item.code,
+              operation: prior?.driverId || prior?.shipmentId ? prior.operation : item.operation });
+          }
+          return [...merged.values()];
+        });
+        setQuery(""); setDate(""); setTerminal(""); setStatus(""); setPage(0);
+        setImportMessage(imported.length + " reservas carregadas nesta sessão.");
+      } catch (error) {
+        setImportMessage("Importação não realizada. " + error.message);
+      }
+    }
     const filtered = reservations.filter((item) =>
       (!terminal || item.terminal === terminal) && (!date || item.date === date) && (!status || item.status === status) &&
       normalize([item.code, item.vessel, item.terminal, item.origin].join(" ")).includes(normalize(query.trim()))
@@ -49,16 +89,20 @@ export function createReservationDesk({ jsx, jsxs, useState, useEffect, useRef, 
       ["Cliente", selected.client], ["Armador", selected.carrier], ["Terminal", selected.terminal],
       ["Data da operação", dateLabel(selected.date)], ["Operação", selected.operation], ["Origem", selected.origin || selected.section],
       ["Contêineres 20′", selected.q20], ["Contêineres 40′", selected.q40], ["Agendamento", selected.appointment],
-      ["Horário", selected.time], ["Gate", selected.gate], ["Período", selected.period], ["Local da operação", selected.local],
+      ["Horário", selected.time], ["Gate", selected.gate], ["Período", selected.period], ["Local da operação", selected.local], ["Contêineres", selected.containers?.join(", ")],
     ];
     return jsxs("section", { className: "rd", children: [
       jsxs("header", { className: "rd-bar rd-page-header", children: [
         jsx("h1", { children: "Controle de Reservas" }),
         jsxs("div", { className: "rd-header-actions", children: [
           jsx("input", { type: "search", placeholder: "Buscar reserva, navio ou terminal", "aria-label": "Buscar reservas", value: query, onChange: (event) => { setQuery(event.target.value); setPage(0); } }),
+          jsxs("label", { className: "rd-secondary rd-import", children: [
+            "Importar programação", jsx("input", { type: "file", accept: ".json,application/json", className: "sr-only", onChange: importReservations }),
+          ] }),
           button(jsxs("span", { children: [jsx(Plus, { size: 17, "aria-hidden": true }), " Nova reserva"] }), () => open("edit", undefined), "rd-primary"),
         ] }),
       ] }),
+      importMessage && jsx("p", { role: "status", children: importMessage }),
       jsx("div", { className: "rd-metrics", role: "group", "aria-label": "Filtrar por situação da reserva", children: metrics.map(([value, label, count, color]) =>
         button(jsxs("span", { children: [jsx("span", { className: "rd-pill " + color, children: label }), jsx("strong", { children: count })] }),
           () => { setStatus(value); setPage(0); }, "rd-metric " + color, { key: label, "aria-pressed": status === value })

@@ -51,3 +51,5 @@
 .rd-dialog-notes p{white-space:pre-wrap;overflow-wrap:anywhere}
 .rd-dialog-footer{display:flex;justify-content:flex-end}
 @media(max-width:600px){.rd-drawer{width:calc(100% - 20px);max-height:calc(100dvh - 24px);border-radius:14px}.rd-dialog-summary .rd-details{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.rd-import{display:inline-flex;align-items:center;cursor:pointer;min-height:40px;background:#fff}
+.rd-import:focus-within{outline:2px solid #238254;outline-offset:2px}
