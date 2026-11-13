@@ -67,19 +67,31 @@ export function renderSectorHome(jsx, jsxs, Icon, navigate, sector, name, action
       ] }),
       jsxs("section", { className: "move-home-tasks", "aria-labelledby": "move-home-tasks-title", children: [
         jsx("h2", { id: "move-home-tasks-title", children: "O que fazer" }),
-        pending.length ? jsx("ul", { className: "move-home-task-list", children: pending.map(([value, label, tab, target], index) => jsx("li", {
-          children: jsxs("button", {
-            type: "button", className: "move-home-task", "data-priority": index === 0,
-            onClick: () => go(tab, target),
-            children: [pictogram(tab), jsx("span", { className: "move-home-task-label", children: label }),
-              jsx("strong", { className: "move-home-task-count", children: count.format(value) }),
-              jsx(Icon, { size: 17, "aria-hidden": true })],
-          }),
-        }, label)) }) : jsx("p", { className: "move-home-empty", children: "Nenhuma ação pendente no painel deste setor." }),
+        !pending.length && jsx("p", { className: "move-home-empty", children: "Nenhuma ação pendente no painel deste setor." }),
+        jsx("ul", { className: "move-home-task-list", children: [
+          ...pending.map(([value, label, tab, target], index) => jsx("li", {
+            children: jsxs("button", {
+              type: "button", className: "move-home-task", "data-priority": index === 0,
+              onClick: () => go(tab, target),
+              children: [
+                jsxs("span", { className: "move-home-card-top", children: [pictogram(tab), jsx(Icon, { size: 17, "aria-hidden": true })] }),
+                jsx("strong", { className: "move-home-task-count", children: count.format(value) }),
+                jsx("span", { className: "move-home-task-label", children: label }),
+              ],
+            }),
+          }, label)),
+          ...shortcuts.map(([label, detail, tab, target]) => jsx("li", {
+            children: jsxs("button", {
+              type: "button", className: "move-home-task move-home-shortcut", onClick: () => go(tab, target),
+              children: [
+                jsxs("span", { className: "move-home-card-top", children: [pictogram(tab), jsx(Icon, { size: 17, "aria-hidden": true })] }),
+                jsx("strong", { className: "move-home-task-label", children: label }),
+                jsx("small", { children: detail }),
+              ],
+            }),
+          }, label)),
+        ] }),
       ] }),
-      shortcuts.length > 0 && jsx("nav", { className: "move-home-links", "aria-label": "Atalhos do setor", children: shortcuts.map(([label, , tab, target]) => jsxs("button", {
-        type: "button", onClick: () => go(tab, target), children: [pictogram(tab), jsx("strong", { children: label }), jsx(Icon, { size: 17, "aria-hidden": true })],
-      }, label)) }),
     ],
   });
 }
